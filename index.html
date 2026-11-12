@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador Interativo de Gráficos</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --accent: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px 12px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1050px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            margin-bottom: 5px;
+        }
+
+        .header h1 {
+            font-size: 1.6rem;
+            color: var(--text-main);
+        }
+
+        .header p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-main);
+        }
+
+        select, input[type="text"], textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            background-color: #f8fafc;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        select:focus, input[type="text"]:focus, textarea:focus {
+            border-color: var(--primary);
+            background-color: #fff;
+        }
+
+        /* Estilo da área de Upload */
+        .file-upload-box {
+            border: 2px dashed #cbd5e1;
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+            background-color: #f8fafc;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 16px;
+        }
+
+        .file-upload-box:hover {
+            border-color: var(--primary);
+            background-color: #eff6ff;
+        }
+
+        .file-upload-box input[type="file"] {
+            display: none;
+        }
+
+        .file-upload-label {
+            cursor: pointer;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.88rem;
+            display: block;
+        }
+
+        .file-status {
+            font-size: 0.78rem;
+            color: var(--accent);
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 75px;
+        }
+
+        .btn-generate {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-generate:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .chart-wrapper {
+            position: relative;
+            width: 100%;
+            min-height: 380px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .instruction {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .chart-wrapper {
+                min-height: 290px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header card">
+            <h1>📊 Gerador Interativo de Gráficos</h1>
+            <p>Importe seu banco de dados (.CSV, .JSON ou .SQL) ou insira os valores manualmente para gerar gráficos instantâneos.</p>
+        </div>
+
+        <!-- Painel de Configuração -->
+        <div class="card">
+            <!-- Input para Importar Banco de Dados / Planilha -->
+            <div class="file-upload-box" onclick="document.getElementById('dbFileInput').click()">
+                <input type="file" id="dbFileInput" accept=".csv,.json,.sql,.txt" onchange="processarArquivo(event)">
+                <span class="file-upload-label">📂 Importar Banco de Dados (.CSV, .JSON, .SQL)</span>
+                <div class="instruction">Clique para selecionar um arquivo do seu dispositivo</div>
+                <div id="fileStatus" class="file-status"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="chartType">Tipo de Gráfico:</label>
+                <select id="chartType" onchange="atualizarInstrucoes()">
+                    <option value="pie">Pizza</option>
+                    <option value="bar">Colunas (Vertical)</option>
+                    <option value="horizontalBar">Barras (Horizontal)</option>
+                    <option value="line">Linhas</option>
+                    <option value="area">Área</option>
+                    <option value="histogram">Histograma</option>
+                    <option value="scatter">Dispersão (Scatter Plot)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="chartTitle">Título do Gráfico:</label>
+                <input type="text" id="chartTitle" value="Desempenho de Dados">
+            </div>
+
+            <div class="form-group" id="labelsGroup">
+                <label for="chartLabels">Rótulos / Categorias (separados por vírgula):</label>
+                <input type="text" id="chartLabels" value="Janeiro, Fevereiro, Março, Abril, Maio">
+            </div>
+
+            <div class="form-group" id="dataGroup">
+                <label for="chartData">Valores (separados por vírgula):</label>
+                <textarea id="chartData">12, 19, 8, 15, 22</textarea>
+                <div class="instruction" id="dataHelp">Valores numéricos equivalentes a cada rótulo.</div>
+            </div>
+
+            <button type="button" class="btn-generate" onclick="gerarGrafico()">Atualizar Gráfico</button>
+        </div>
+
+        <!-- Área de Exibição do Gráfico -->
+        <div class="card chart-wrapper">
+            <canvas id="meuGrafico"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let meuGraficoInstancia = null;
+
+        const coresPadrao = [
+            '#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
+            '#ec4899', '#06b6d4', '#84cc16', '#6366f1', '#14b8a6'
+        ];
+
+        // Leitor de Arquivos (CSV, JSON, SQL)
+        function processarArquivo(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const statusEl = document.getElementById('fileStatus');
+            statusEl.innerText = `Arquivo carregado: ${file.name}`;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const conteudo = e.target.result;
+                const extensao = file.name.split('.').pop().toLowerCase();
+
+                let labels = [];
+                let valores = [];
+
+                try {
+                    if (extensao === 'json') {
+                        const json = JSON.parse(conteudo);
+                        if (Array.isArray(json) && json.length > 0) {
+                            const chaves = Object.keys(json[0]);
+                            labels = json.map(item => item[chaves[0]]);
+                            valores = json.map(item => parseFloat(item[chaves[1]]) || 0);
+                        }
+                    } else if (extensao === 'sql') {
+                        // Extrai pares ('Texto', Numero) de comandos INSERT INTO
+                        const regex = /\(\s*'([^']+)'\s*,\s*(\d+(\.\d+)?)\s*\)/g;
+                        let match;
+                        while ((match = regex.exec(conteudo)) !== null) {
+                            labels.push(match[1]);
+                            valores.push(parseFloat(match[2]));
+                        }
+                    } else {
+                        // CSV ou TXT (suporta padrão brasileiro ';' e decimal ',' ou padrão americano ',')
+                        const linhas = conteudo.split(/\r?\n/).filter(l => l.trim() !== '');
+                        linhas.forEach((linha, index) => {
+                            const separador = linha.includes(';') ? ';' : ',';
+                            const colunas = linha.split(separador);
+                            
+                            if (colunas.length >= 2) {
+                                // Troca vírgula decimal por ponto para o JavaScript entender o número
+                                const valorLimpo = colunas[1].trim().replace(/['"]/g, '').replace(',', '.');
+                                const numero = parseFloat(valorLimpo);
+
+                                // Ignora a primeira linha se for cabeçalho (ex: "Categoria;Valor")
+                                if (index === 0 && isNaN(numero)) return;
+
+                                if (!isNaN(numero)) {
+                                    labels.push(colunas[0].trim().replace(/['"]/g, ''));
+                                    valores.push(numero);
+                                }
+                            }
+                        });
+                    }
+
+                    if (labels.length > 0 && valores.length > 0) {
+                        document.getElementById('chartTitle').value = `Dados: ${file.name}`;
+                        document.getElementById('chartLabels').value = labels.join(', ');
+                        document.getElementById('chartData').value = valores.join(', ');
+                        gerarGrafico();
+                    } else {
+                        alert('Não foi possível extrair colunas de texto e número do arquivo. Verifique o formato.');
+                    }
+                } catch (err) {
+                    alert('Erro ao ler o arquivo: ' + err.message);
+                }
+            };
+
+            reader.readAsText(file);
+        }
+
+        function atualizarInstrucoes() {
+            const tipo = document.getElementById('chartType').value;
+            const labelsGroup = document.getElementById('labelsGroup');
+            const dataHelp = document.getElementById('dataHelp');
+
+            if (tipo === 'scatter') {
+                labelsGroup.style.display = 'none';
+                dataHelp.innerText = 'Para Dispersão, insira pares X:Y no formato: 10:20, 15:25, 25:30';
+            } else if (tipo === 'histogram') {
+                labelsGroup.style.display = 'none';
+                dataHelp.innerText = 'Para Histograma, insira números brutos. Ex: 10, 12, 15, 18, 22, 25, 30';
+            } else {
+                labelsGroup.style.display = 'block';
+                dataHelp.innerText = 'Valores numéricos equivalentes a cada rótulo.';
+            }
+        }
+
+        function gerarGrafico() {
+            const tipo = document.getElementById('chartType').value;
+            const titulo = document.getElementById('chartTitle').value;
+            const labelsInput = document.getElementById('chartLabels').value;
+            const dataInput = document.getElementById('chartData').value;
+
+            const ctx = document.getElementById('meuGrafico').getContext('2d');
+
+            if (meuGraficoInstancia) {
+                meuGraficoInstancia.destroy();
+            }
+
+            let chartTypeConfig = tipo;
+            let indexAxisConfig = 'x';
+            let datasetsConfig = [];
+            let labelsFinal = [];
+
+            if (tipo === 'horizontalBar') {
+                chartTypeConfig = 'bar';
+                indexAxisConfig = 'y';
+            } else if (tipo === 'area') {
+                chartTypeConfig = 'line';
+            }
+
+            if (tipo === 'scatter') {
+                const pares = dataInput.split(',').map(p => {
+                    const [x, y] = p.trim().split(':').map(Number);
+                    return { x: x || 0, y: y || 0 };
+                });
+
+                datasetsConfig = [{
+                    label: titulo,
+                    data: pares,
+                    backgroundColor: '#2563eb',
+                    pointRadius: 6
+                }];
+            } else if (tipo === 'histogram') {
+                const numeros = dataInput.split(',').map(n => parseFloat(n.trim())).filter(n => !isNaN(n));
+                const min = Math.min(...numeros);
+                const max = Math.max(...numeros);
+                const binsCount = 5;
+                const binSize = (max - min) / binsCount || 1;
+
+                const bins = Array(binsCount).fill(0);
+                labelsFinal = [];
+
+                for (let i = 0; i < binsCount; i++) {
+                    const inicio = (min + i * binSize).toFixed(1);
+                    const fim = (min + (i + 1) * binSize).toFixed(1);
+                    labelsFinal.push(`[${inicio} - ${fim}]`);
+                }
+
+                numeros.forEach(num => {
+                    let index = Math.floor((num - min) / binSize);
+                    if (index >= binsCount) index = binsCount - 1;
+                    bins[index]++;
+                });
+
+                chartTypeConfig = 'bar';
+                datasetsConfig = [{
+                    label: 'Frequência',
+                    data: bins,
+                    backgroundColor: '#10b981',
+                    categoryPercentage: 1.0,
+                    barPercentage: 1.0
+                }];
+            } else {
+                labelsFinal = labelsInput.split(',').map(s => s.trim());
+                const valores = dataInput.split(',').map(s => parseFloat(s.trim()) || 0);
+                const isPie = tipo === 'pie';
+
+                datasetsConfig = [{
+                    label: titulo,
+                    data: valores,
+                    backgroundColor: isPie ? coresPadrao : (tipo === 'area' ? 'rgba(37, 99, 235, 0.2)' : '#2563eb'),
+                    borderColor: tipo === 'line' || tipo === 'area' ? '#2563eb' : undefined,
+                    borderWidth: 2,
+                    fill: tipo === 'area',
+                    tension: 0.3
+                }];
+            }
+
+            meuGraficoInstancia = new Chart(ctx, {
+                type: chartTypeConfig,
+                data: {
+                    labels: labelsFinal,
+                    datasets: datasetsConfig
+                },
+                options: {
+                    indexAxis: indexAxisConfig,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: titulo,
+                            font: { size: 16 }
+                        },
+                        legend: {
+                            display: tipo === 'pie' || tipo === 'scatter'
+                        }
+                    }
+                }
+            });
+        }
+
+        window.onload = function() {
+            gerarGrafico();
+        };
+    </script>
+</body>
+</html>
